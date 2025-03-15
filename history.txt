@@ -1,0 +1,10 @@
+#V2
+show tables;
+show tables
+show tables;
+select * from ta;
+select * from ta1;
+select table ta1;
+select table ta1
+show table ta1
+show table ta

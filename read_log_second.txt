@@ -1,0 +1,167 @@
+
+running 1 test
+[32m[src/storage/disk.rs:409:9] "开始读取日志文件~~~"[0m
+[32m[src/storage/disk.rs:410:9] "开启临时重写~~~"[0m
+[31m
+=>函数调用[src/storage/disk.rs:25:9]"新建磁盘存储引擎中~~~"
+[0m
+[32m[src/storage/disk.rs:26:9] "开始构建日志文件系统~~~"[0m
+[31m
+=>函数调用[src/storage/disk.rs:154:9]"启动日志文件系统~~"
+[0m
+[32m[src/storage/disk.rs:28:9] "日志文件系统构建成功~~~"[0m
+[32m[src/storage/disk.rs:29:9] "开始构建内存索引系统~~~"[0m
+[31m
+=>函数调用[src/storage/disk.rs:179:9]"构建内存索引"
+[0m
+[32m[src/storage/disk.rs:183:9] "初次启动引擎，循环读取日志条目，构建索引"[0m
+[32m[src/storage/disk.rs:193:13] "第1条数据:"[0m
+[33m[src/storage/disk.rs:294:13] "本次读取到的日志条目信息:"[0m
+[33m[src/storage/disk.rs:294:13] "key_size="[0m
+[33m[src/storage/disk.rs:294:13] 4[0m
+[33m[src/storage/disk.rs:294:13] "val_size="[0m
+[33m[src/storage/disk.rs:294:13] 5[0m
+[33m[src/storage/disk.rs:294:13] "key="[0m
+[33m[src/storage/disk.rs:294:13] [
+    107,
+    101,
+    121,
+    50,
+][0m
+[33m[src/storage/disk.rs:294:13] "value"[0m
+[33m[src/storage/disk.rs:294:13] [
+    118,
+    97,
+    108,
+    117,
+    101,
+][0m
+[33m[src/storage/disk.rs:196:13] [
+    107,
+    101,
+    121,
+    50,
+][0m
+[33m[src/storage/disk.rs:196:13] 5[0m
+[32m[src/storage/disk.rs:202:17] "这是有效的数据，要用他来构建索引"[0m
+[32m[src/storage/disk.rs:193:13] "第2条数据:"[0m
+[33m[src/storage/disk.rs:294:13] "本次读取到的日志条目信息:"[0m
+[33m[src/storage/disk.rs:294:13] "key_size="[0m
+[33m[src/storage/disk.rs:294:13] 4[0m
+[33m[src/storage/disk.rs:294:13] "val_size="[0m
+[33m[src/storage/disk.rs:294:13] 6[0m
+[33m[src/storage/disk.rs:294:13] "key="[0m
+[33m[src/storage/disk.rs:294:13] [
+    107,
+    101,
+    121,
+    51,
+][0m
+[33m[src/storage/disk.rs:294:13] "value"[0m
+[33m[src/storage/disk.rs:294:13] [
+    118,
+    97,
+    108,
+    117,
+    101,
+    51,
+][0m
+[33m[src/storage/disk.rs:196:13] [
+    107,
+    101,
+    121,
+    51,
+][0m
+[33m[src/storage/disk.rs:196:13] 6[0m
+[32m[src/storage/disk.rs:202:17] "这是有效的数据，要用他来构建索引"[0m
+[32m[src/storage/disk.rs:188:17] "日志为空，未有数据，直接退出"[0m
+[33m[src/storage/disk.rs:214:9] "首次读取得到的索引内容为:"[0m
+[33m[src/storage/disk.rs:214:9] {
+    [
+        107,
+        101,
+        121,
+        50,
+    ]: (
+        12,
+        5,
+    ),
+    [
+        107,
+        101,
+        121,
+        51,
+    ]: (
+        29,
+        6,
+    ),
+}[0m
+[32m[src/storage/disk.rs:33:9] "内存索引系统构建成功~~"[0m
+[32m[src/storage/disk.rs:35:9] "现在的内存索引条目=>"[0m
+[32m[src/storage/disk.rs:35:9] {[107, 101, 121, 50]: (12, 5), [107, 101, 121, 51]: (29, 6)}[0m
+[32m[src/storage/disk.rs:36:9] "磁盘存储引擎构建成功，正式启动~~~"[0m
+[31m
+=>函数调用[src/storage/disk.rs:154:9]"启动日志文件系统~~"
+[0m
+[31m
+=>函数调用[src/storage/disk.rs:221:9]"读取日志文件"
+[0m
+[32m[src/storage/disk.rs:234:13] "第1条数据:"[0m
+[33m[src/storage/disk.rs:342:13] "本次读取到的日志条目信息:"[0m
+[33m[src/storage/disk.rs:342:13] "key_size="[0m
+[33m[src/storage/disk.rs:342:13] 4[0m
+[33m[src/storage/disk.rs:342:13] "val_size="[0m
+[33m[src/storage/disk.rs:342:13] 5[0m
+[33m[src/storage/disk.rs:342:13] "key="[0m
+[33m[src/storage/disk.rs:342:13] [
+    107,
+    101,
+    121,
+    50,
+][0m
+[33m[src/storage/disk.rs:342:13] "value"[0m
+[33m[src/storage/disk.rs:342:13] [
+    118,
+    97,
+    108,
+    117,
+    101,
+][0m
+[32m[src/storage/disk.rs:234:13] "第2条数据:"[0m
+[33m[src/storage/disk.rs:342:13] "本次读取到的日志条目信息:"[0m
+[33m[src/storage/disk.rs:342:13] "key_size="[0m
+[33m[src/storage/disk.rs:342:13] 4[0m
+[33m[src/storage/disk.rs:342:13] "val_size="[0m
+[33m[src/storage/disk.rs:342:13] 6[0m
+[33m[src/storage/disk.rs:342:13] "key="[0m
+[33m[src/storage/disk.rs:342:13] [
+    107,
+    101,
+    121,
+    51,
+][0m
+[33m[src/storage/disk.rs:342:13] "value"[0m
+[33m[src/storage/disk.rs:342:13] [
+    118,
+    97,
+    108,
+    117,
+    101,
+    51,
+][0m
+[32m[src/storage/disk.rs:229:17] "日志读取完毕，直接退出"[0m
+[32m[src/storage/disk.rs:414:9] "读取日志文件完毕~~~"[0m
+test storage::disk::tets::read_log_file_compact ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 53 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

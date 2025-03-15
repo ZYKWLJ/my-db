@@ -1,0 +1,125 @@
+
+running 1 test
+[32m[src/storage/disk.rs:401:9] "开始读取日志文件~~~"[0m
+[31m
+=>函数调用[src/storage/disk.rs:154:9]"启动日志文件系统~~"
+[0m
+[31m
+=>函数调用[src/storage/disk.rs:221:9]"读取日志文件"
+[0m
+[32m[src/storage/disk.rs:234:13] "第1条数据:"[0m
+[33m[src/storage/disk.rs:342:13] "本次读取到的日志条目信息:"[0m
+[33m[src/storage/disk.rs:342:13] "key_size="[0m
+[33m[src/storage/disk.rs:342:13] 4[0m
+[33m[src/storage/disk.rs:342:13] "val_size="[0m
+[33m[src/storage/disk.rs:342:13] 5[0m
+[33m[src/storage/disk.rs:342:13] "key="[0m
+[33m[src/storage/disk.rs:342:13] [
+    107,
+    101,
+    121,
+    49,
+][0m
+[33m[src/storage/disk.rs:342:13] "value"[0m
+[33m[src/storage/disk.rs:342:13] [
+    118,
+    97,
+    108,
+    117,
+    101,
+][0m
+[32m[src/storage/disk.rs:234:13] "第2条数据:"[0m
+[33m[src/storage/disk.rs:342:13] "本次读取到的日志条目信息:"[0m
+[33m[src/storage/disk.rs:342:13] "key_size="[0m
+[33m[src/storage/disk.rs:342:13] 4[0m
+[33m[src/storage/disk.rs:342:13] "val_size="[0m
+[33m[src/storage/disk.rs:342:13] 5[0m
+[33m[src/storage/disk.rs:342:13] "key="[0m
+[33m[src/storage/disk.rs:342:13] [
+    107,
+    101,
+    121,
+    50,
+][0m
+[33m[src/storage/disk.rs:342:13] "value"[0m
+[33m[src/storage/disk.rs:342:13] [
+    118,
+    97,
+    108,
+    117,
+    101,
+][0m
+[32m[src/storage/disk.rs:234:13] "第3条数据:"[0m
+[33m[src/storage/disk.rs:342:13] "本次读取到的日志条目信息:"[0m
+[33m[src/storage/disk.rs:342:13] "key_size="[0m
+[33m[src/storage/disk.rs:342:13] 4[0m
+[33m[src/storage/disk.rs:342:13] "val_size="[0m
+[33m[src/storage/disk.rs:342:13] 5[0m
+[33m[src/storage/disk.rs:342:13] "key="[0m
+[33m[src/storage/disk.rs:342:13] [
+    107,
+    101,
+    121,
+    51,
+][0m
+[33m[src/storage/disk.rs:342:13] "value"[0m
+[33m[src/storage/disk.rs:342:13] [
+    118,
+    97,
+    108,
+    117,
+    101,
+][0m
+[32m[src/storage/disk.rs:234:13] "第4条数据:"[0m
+[33m[src/storage/disk.rs:354:13] "本次读取到的日志条目信息:"[0m
+[33m[src/storage/disk.rs:354:13] "key_size="[0m
+[33m[src/storage/disk.rs:354:13] 4[0m
+[33m[src/storage/disk.rs:354:13] "val_size="[0m
+[33m[src/storage/disk.rs:354:13] -1[0m
+[33m[src/storage/disk.rs:354:13] "key="[0m
+[33m[src/storage/disk.rs:354:13] [
+    107,
+    101,
+    121,
+    49,
+][0m
+[33m[src/storage/disk.rs:354:13] "value"[0m
+[33m[src/storage/disk.rs:354:13] "None"[0m
+[32m[src/storage/disk.rs:234:13] "第5条数据:"[0m
+[33m[src/storage/disk.rs:342:13] "本次读取到的日志条目信息:"[0m
+[33m[src/storage/disk.rs:342:13] "key_size="[0m
+[33m[src/storage/disk.rs:342:13] 4[0m
+[33m[src/storage/disk.rs:342:13] "val_size="[0m
+[33m[src/storage/disk.rs:342:13] 6[0m
+[33m[src/storage/disk.rs:342:13] "key="[0m
+[33m[src/storage/disk.rs:342:13] [
+    107,
+    101,
+    121,
+    51,
+][0m
+[33m[src/storage/disk.rs:342:13] "value"[0m
+[33m[src/storage/disk.rs:342:13] [
+    118,
+    97,
+    108,
+    117,
+    101,
+    51,
+][0m
+[32m[src/storage/disk.rs:229:17] "日志读取完毕，直接退出"[0m
+[32m[src/storage/disk.rs:404:9] "读取日志文件完毕~~~"[0m
+test storage::disk::tets::read_log_file ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 52 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
