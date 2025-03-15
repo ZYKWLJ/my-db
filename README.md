@@ -1,6 +1,3 @@
-# sqldb-rs
-Rust 实现的 SQL 数据库系统，教学使用
-
 ## 支持的 SQL 语法
 
 ### 1. Create/Drop Table
