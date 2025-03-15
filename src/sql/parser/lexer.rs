@@ -1,6 +1,6 @@
-use std::{fmt::Display, iter::Peekable, str::Chars};
+use std::{fmt::Display, iter::Peekable, result, str::Chars};
 
-use crate::error::{Error, Result};
+use crate::{error::{Error, Result}, pppg};
 
 use super::ast::{Consts, Expression};
 
@@ -93,6 +93,8 @@ impl Token {
 impl Display for Token {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(match self {
+            //write_str 接收一个 match 表达式的结果作为参数。这个 match 表达式根据 Token 的不同变体返回相应的字符串表示：
+            // 使得 Token 类型可以方便地转换为人类可读的字符串形式，便于调试和显示。也即将SQL命令Token化！
             Token::Keyword(keyword) => keyword.to_str(),
             Token::Ident(ident) => ident,
             Token::String(v) => v,
@@ -169,6 +171,7 @@ pub enum Keyword {
 impl Keyword {
     pub fn from_str(ident: &str) -> Option<Self> {
         Some(match ident.to_uppercase().as_ref() {
+            //忽略了大小写
             "CREATE" => Keyword::Create,
             "TABLE" => Keyword::Table,
             "INT" => Keyword::Int,
@@ -244,9 +247,9 @@ impl Keyword {
             Keyword::Default => "DEFAULT",
             Keyword::Not => "NOT",
             Keyword::Null => "NULL",
-            Keyword::Primary => "PRIMARY",//主键关键字
+            Keyword::Primary => "PRIMARY", //主键关键字
             Keyword::Key => "KEY",
-            Keyword::Update => "UPDATE",//补充对应的额关键字！
+            Keyword::Update => "UPDATE", //补充对应的额关键字！
             Keyword::Set => "SET",
             Keyword::Where => "WHERE",
             Keyword::Delete => "DELETE",
@@ -274,6 +277,7 @@ impl Keyword {
     }
 }
 
+// 将 Keyword 枚举实例转换为字符串并写入到格式化器 f 中。方便输出，这使得带Token的Keyword::Drop方便的转化为Drop
 impl Display for Keyword {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(self.to_str())
@@ -283,17 +287,19 @@ impl Display for Keyword {
 // 词法分析 Lexer 定义
 // 目前支持的 SQL 语法
 // see README.md
+#[derive(Debug)]
 pub struct Lexer<'a> {
+    // 就是一个迭代器，用于遍历 SQL 文本中的字符
     iter: Peekable<Chars<'a>>,
 }
 
 // 自定义迭代器，返回 Token
 impl<'a> Iterator for Lexer<'a> {
-    type Item = Result<Token>;
+    type Item = Result<Token>; //迭代的基本单元——包含token的Item
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.scan() {
-            Ok(Some(token)) => Some(Ok(token)),
+            Ok(Some(token)) => Some(Ok(token)), //如果还有下一个字符，并且下一个字符是Token的话，就继续，否则就报错！
             Ok(None) => self
                 .iter
                 .peek()
@@ -302,7 +308,7 @@ impl<'a> Iterator for Lexer<'a> {
         }
     }
 }
-
+// 实现 Lexer 结构体，无非就是一直探测下一个Token，并组织成对应数据处理形式
 impl<'a> Lexer<'a> {
     pub fn new(sql_text: &'a str) -> Self {
         Self {
@@ -314,6 +320,8 @@ impl<'a> Lexer<'a> {
     // eg. selct *       from        t;
     fn erase_whitespace(&mut self) {
         self.next_while(|c| c.is_whitespace());
+        //闭包本身就是一个迭代循环！这里非"" 会直接返回字符，但是是" "的话会全部过滤掉！
+        // 实现数据洗净功能
     }
 
     // 如果满足条件，则跳转到下一个字符，并返回该字符
@@ -323,13 +331,17 @@ impl<'a> Lexer<'a> {
     }
 
     // 判断当前字符是否满足条件，如果是的话就跳转到下一个字符
+    // 这种设计使得 next_while 更加通用。它可以用于收集字符（当我们需要这些字符时），也可以用于跳过字符（当我们忽略返回值时）。
+    //本质功能——使得空格块与数据分离！
     fn next_while<F: Fn(char) -> bool>(&mut self, predicate: F) -> Option<String> {
-        let mut value = String::new();
+        let mut value = String::new(); //装载在一个字符串中
         while let Some(c) = self.next_if(&predicate) {
+            //满足的话就加入并返回当前值
             value.push(c);
         }
-
-        Some(value).filter(|v| !v.is_empty())
+        let res = Some(value).filter(|v| !v.is_empty());
+        pppg!("本次数据：",res);
+        res
     }
 
     // 只有是 Token 类型，才跳转到下一个，并返回 Token
@@ -345,10 +357,10 @@ impl<'a> Lexer<'a> {
         self.erase_whitespace();
         // 根据第一个字符判断
         match self.iter.peek() {
-            Some('\'') => self.scan_string(), // 扫描字符串
+            Some('\'') => self.scan_string(), // 如果第一个字符是',说明是字符串，则扫描字符串
             Some(c) if c.is_ascii_digit() => Ok(self.scan_number()), // 扫描数字
-            Some(c) if c.is_alphabetic() => Ok(self.scan_ident()), // 扫描 Ident 类型
-            Some(_) => Ok(self.scan_symbol()), // 扫描符号
+            Some(c) if c.is_alphabetic() => Ok(self.scan_ident()), // 扫描 SQL 类型，可能是关键字，也有可能是表名、列名等
+            Some(_) => Ok(self.scan_symbol()),                     // 扫描符号+-*、=（）等
             None => Ok(None),
         }
     }
@@ -388,19 +400,23 @@ impl<'a> Lexer<'a> {
         Some(Token::Number(num))
     }
 
-    // 扫描 Ident 类型，例如表名、列名等，也有可能是关键字，true / false
+    // 扫描 Ident 类型，例如表名、列名等，也有可能是SQL词元
     fn scan_ident(&mut self) -> Option<Token> {
+        // 确保了标识符总是以字母开头，否则就？返回错误。这是大多数编程语言和 SQL 中标识符的常见规则。
         let mut value = self.next_if(|c| c.is_alphabetic())?.to_string();
+        // 接着扫描剩下的部分。直到遇到不是字母、数字或下划线的字符为止，从而构建完整的标识符。
         while let Some(c) = self.next_if(|c| c.is_alphanumeric() || c == '_') {
             value.push(c);
         }
-
+        // 根据输入的 value 字符串尝试将其转换为 Keyword 枚举类型。如果转换成功，就将其包装成 Token::Keyword 类型；如果转换失败，就将 value 转换为小写后包装成 Token::Ident 类型，最后将结果用 Some 包裹。
+        // 一举两得，因为有可能是SQL词元，也有可能是表名、列名等！这里直接全部判断解决了！
         Some(Keyword::from_str(&value).map_or(Token::Ident(value.to_lowercase()), Token::Keyword))
     }
 
     // 扫描符号
     fn scan_symbol(&mut self) -> Option<Token> {
         self.next_if_token(|c| match c {
+            //只有是Token的元词，才会立即返回！
             '*' => Some(Token::Asterisk),
             '(' => Some(Token::OpenParen),
             ')' => Some(Token::CloseParen),
@@ -419,13 +435,23 @@ impl<'a> Lexer<'a> {
 
 #[cfg(test)]
 mod tests {
-    use std::vec;
+    use std::{result, vec};
 
     use super::Lexer;
     use crate::{
         error::Result,
+        pppb, pppr_no_ln, pppy,
         sql::parser::lexer::{Keyword, Token},
     };
+ #[test]
+    fn test_eliminate_white_space() -> Result<()> {
+        let sql = "   sel ect   *  from t    ;";
+        let mut lexer = Lexer::new(sql);
+        let mut res = lexer.peekable()
+        .collect::<Result<Vec<_>>>()?;
+        pppy!(res);
+        Ok(())
+    }
 
     #[test]
     fn test_lexer_create_table() -> Result<()> {
