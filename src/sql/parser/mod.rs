@@ -3,7 +3,10 @@ use std::{collections::BTreeMap, iter::Peekable};
 use ast::{Column, Expression, Operation, OrderDirection};
 use lexer::{Keyword, Lexer, Token};
 
-use crate::error::{Error, Result};
+use crate::{
+    error::{Error, Result},
+    ppb, pppb, pppg, pppy,
+};
 
 use super::types::DataType;
 
@@ -24,10 +27,14 @@ impl<'a> Parser<'a> {
 
     // 解析，获取到抽象语法树
     pub fn parse(&mut self) -> Result<ast::Statement> {
-        let stmt = self.parse_statement()?;
+        pppb!("开始纯解析Token，并且组织成语法树");
+        let stmt = self.parse_statement()?; //总分枝
+        pppb!("期待sql语句的最后有一个分号");
         // 期望 sql 语句的最后有个分号
         self.next_expect(Token::Semicolon)?;
         // 分号之后不能有其他的符号
+        pppb!("分号之后不能有其他的符号");
+
         if let Some(token) = self.peek()? {
             return Err(Error::Parse(format!("[Parser] Unexpected token {}", token)));
         }
@@ -36,7 +43,7 @@ impl<'a> Parser<'a> {
 
     fn parse_statement(&mut self) -> Result<ast::Statement> {
         // 查看第一个 Token 类型
-        // 其实本质就是这么一个一个解析的Token！分别查看第一个Token确定接下来的语句类型
+        // 本质就是一个一个解析Token,分别查看第一个Token确定接下来的语句类型
         match self.peek()? {
             Some(Token::Keyword(Keyword::Create)) => self.parse_ddl(),
             Some(Token::Keyword(Keyword::Drop)) => self.parse_ddl(),
@@ -65,7 +72,9 @@ impl<'a> Parser<'a> {
 
     // 解析 Select 语句
     fn parse_select(&mut self) -> Result<ast::Statement> {
-        Ok(ast::Statement::Select {
+        pppy!("开始解析总的select语句......");
+        // 返回的是AST
+        let res = Ok(ast::Statement::Select {
             select: self.parse_select_clause()?,
             from: self.parse_from_clause()?,
             where_clause: self.parse_where_clause()?,
@@ -73,23 +82,33 @@ impl<'a> Parser<'a> {
             having: self.parse_having_clause()?,
             order_by: self.parse_order_clause()?,
             limit: {
+                pppb!(format!("开始解析limit子句......"));
                 if self.next_if_token(Token::Keyword(Keyword::Limit)).is_some() {
-                    Some(self.parse_expression()?)
+                    let res = Some(self.parse_expression()?);
+                    pppb!(format!("解析得到的limit子句为:{:?}", res));
+                    res
                 } else {
                     None
                 }
             },
             offset: {
+                pppb!(format!("开始解析offset子句......"));
+
                 if self
                     .next_if_token(Token::Keyword(Keyword::Offset))
                     .is_some()
                 {
-                    Some(self.parse_expression()?)
+                    // Some(self.parse_expression()?)
+                    let res = Some(self.parse_expression()?);
+                    pppb!(format!("解析得到的offset子句为:{:?}", res));
+                    res
                 } else {
                     None
                 }
             },
-        })
+        });
+        pppy!(format!("解析得到的select总语法树为:{:?}", res));
+        res
     }
 
     // 解析 Insert 语句
@@ -296,11 +315,16 @@ impl<'a> Parser<'a> {
             stmt: Box::new(stmt),
         })
     }
-
+    // 解析where子句
     fn parse_where_clause(&mut self) -> Result<Option<Expression>> {
+        pppb!("解析where子句");
         if self.next_if_token(Token::Keyword(Keyword::Where)).is_none() {
             return Ok(None);
         }
+        pppy!(format!(
+            "解析出来的where子句:{:?}",
+            self.parse_opreation_expr()
+        ));
 
         Ok(Some(self.parse_opreation_expr()?))
     }
@@ -312,11 +336,15 @@ impl<'a> Parser<'a> {
         {
             return Ok(None);
         }
-
+        pppy!(format!(
+            "解析出来的having子句:{:?}",
+            self.parse_opreation_expr()
+        ));
         Ok(Some(self.parse_opreation_expr()?))
     }
-
+    // 解析 SQL 语句中的 ORDER BY 子句
     fn parse_order_clause(&mut self) -> Result<Vec<(String, OrderDirection)>> {
+        pppy!("开始解析OrderBy子句......");
         let mut orders = Vec::new();
         if self.next_if_token(Token::Keyword(Keyword::Order)).is_none() {
             return Ok(orders);
@@ -341,61 +369,75 @@ impl<'a> Parser<'a> {
                 break;
             }
         }
-
+        pppy!(format!("解析出来的OrderBy子句:{:?}", orders));
         Ok(orders)
     }
 
     fn parse_select_clause(&mut self) -> Result<Vec<(Expression, Option<String>)>> {
-        self.next_expect(Token::Keyword(Keyword::Select))?;
+        pppy!("开始解析Select子句......");
+
+        self.next_expect(Token::Keyword(Keyword::Select))?; //如果下一个类型不是select直接退出
 
         let mut select = Vec::new();
         // select *
+        // 这是单独的分支，全表查询，说明已经解析完了！
         if self.next_if_token(Token::Asterisk).is_some() {
+            pppy!(format!("解析出来的Select子句{:?}", select));
             return Ok(select);
         }
-
+        // 具体查询某行某列，无限循环找Token
         loop {
+            // 解析表达式，字段、函数、常量，解析完之后，会返回一个表达式！
             let expr = self.parse_expression()?;
-            // 查看是否有别名
+            // 查看是否有别名 -检测关键词是否是as，没有就是null
             let alias = match self.next_if_token(Token::Keyword(Keyword::As)) {
                 Some(_) => Some(self.next_ident()?),
                 None => None,
             };
+
             select.push((expr, alias));
+            // SELECT column1, column2 AS alias2, column3
+            // 发现不是逗号说明解析完了，退出。如果是逗号，说明还没解析完，继续解析！
             if self.next_if_token(Token::Comma).is_none() {
                 break;
             }
         }
-
+        pppy!(format!("解析出来的Select子句{:?}", select));
         Ok(select)
     }
 
     fn parse_from_clause(&mut self) -> Result<ast::FromItem> {
+        pppy!("开始解析From子句......");
+
         // From 关键字
         self.next_expect(Token::Keyword(Keyword::From))?;
 
         // 第一个表名
         let mut item = self.parse_from_table_clause()?;
+        pppg!("下面检测是否有join连接");
         // 是否有 Join
         while let Some(join_type) = self.parse_from_clause_join()? {
             let left = Box::new(item);
             let right = Box::new(self.parse_from_table_clause()?);
 
-            // 解析 Join 条件
+            // 解析 Join 条件与类型
+            pppg!("开始解析join条件与类型");
             let predicate = match join_type {
                 ast::JoinType::Cross => None,
                 _ => {
                     self.next_expect(Token::Keyword(Keyword::On))?;
                     let l = self.parse_expression()?;
+                    pppy!(format!("解析出来的左连接:{:?}", l));
                     self.next_expect(Token::Equal)?;
                     let r = self.parse_expression()?;
-
+                    pppy!(format!("解析出来的右连接:{:?}", r));
                     let (l, r) = match join_type {
                         ast::JoinType::Right => (r, l),
                         _ => (l, r),
                     };
 
                     let cond = Operation::Equal(Box::new(l), Box::new(r));
+                    pppy!(format!("返回的连接条件:{:?}", cond));
                     Some(ast::Expression::Operation(cond))
                 }
             };
@@ -405,97 +447,180 @@ impl<'a> Parser<'a> {
                 right,
                 join_type,
                 predicate,
-            }
+            };
+            pppy!(format!("解析出来的From子句{:?}", item));
         }
 
         Ok(item)
     }
 
     fn parse_group_clause(&mut self) -> Result<Option<Expression>> {
+        pppy!("开始解析Group子句......");
+
         if self.next_if_token(Token::Keyword(Keyword::Group)).is_none() {
             return Ok(None);
         }
 
         self.next_expect(Token::Keyword(Keyword::By))?;
+        pppy!(format!("解析出来的Group子句{:?}", self.parse_expression()?));
+
         Ok(Some(self.parse_expression()?))
     }
-
+    // 得到from后面的表名
     fn parse_from_table_clause(&mut self) -> Result<ast::FromItem> {
+        pppy!("开始解析表名......");
+        pppy!(format!(
+            "解析出来的表名{:?}",
+            ast::FromItem::Table {
+                name: self.next_ident()?,
+            }
+        ));
         Ok(ast::FromItem::Table {
             name: self.next_ident()?,
         })
     }
 
     fn parse_from_clause_join(&mut self) -> Result<Option<ast::JoinType>> {
+        pppy!("开始解析join条件......");
         // 是否是 Cross Join
         if self.next_if_token(Token::Keyword(Keyword::Cross)).is_some() {
-            self.next_expect(Token::Keyword(Keyword::Join))?;
+            self.next_expect(Token::Keyword(Keyword::Join))?; //不是的话就报错！因为这是固定搭配！
+            pppy!(format!(
+                "解析出来的join条件:{:?}",
+                Some(ast::JoinType::Cross)
+            ));
             Ok(Some(ast::JoinType::Cross)) // Cross Join
         } else if self.next_if_token(Token::Keyword(Keyword::Join)).is_some() {
+            pppy!(format!(
+                "解析出来的join条件:{:?}",
+                Some(ast::JoinType::Inner)
+            ));
             Ok(Some(ast::JoinType::Inner)) // Inner Join
         } else if self.next_if_token(Token::Keyword(Keyword::Left)).is_some() {
             self.next_expect(Token::Keyword(Keyword::Join))?;
+            pppy!(format!(
+                "解析出来的join条件:{:?}",
+                Some(ast::JoinType::Left)
+            ));
             Ok(Some(ast::JoinType::Left)) // Left Join
         } else if self.next_if_token(Token::Keyword(Keyword::Right)).is_some() {
             self.next_expect(Token::Keyword(Keyword::Join))?;
+            pppy!(format!(
+                "解析出来的join条件:{:?}",
+                Some(ast::JoinType::Right)
+            ));
             Ok(Some(ast::JoinType::Right)) // Right Join
         } else {
+            pppy!(format!("没有解析出join条件"));
             Ok(None)
         }
     }
 
     fn parse_opreation_expr(&mut self) -> Result<ast::Expression> {
+        pppy!("开始解析运算符表达式......");
+        // 类似于 a>1
+        // 这里的left = a
         let left = self.parse_expression()?;
+        // 下面继续解析right
         Ok(match self.next()? {
-            Token::Equal => ast::Expression::Operation(Operation::Equal(
-                Box::new(left),
-                Box::new(self.compute_math_operator(1)?),
-            )),
-            Token::GreaterThan => ast::Expression::Operation(Operation::GreaterThan(
-                Box::new(left),
-                Box::new(self.compute_math_operator(1)?),
-            )),
-            Token::LessThan => ast::Expression::Operation(Operation::LessThan(
-                Box::new(left),
-                Box::new(self.compute_math_operator(1)?),
-            )),
+            // 优先级
+            Token::Equal => {
+                let res = ast::Expression::Operation(Operation::Equal(
+                    Box::new(left),
+                    Box::new(self.compute_math_operator(1)?),
+                ));
+                pppy!("解析出来的运算符表达式:{:?}", res);
+                res
+            }
+            Token::GreaterThan => {
+                let res = ast::Expression::Operation(Operation::GreaterThan(
+                    Box::new(left),
+                    Box::new(self.compute_math_operator(1)?),
+                ));
+                pppy!("解析出来的运算符表达式:{:?}", res);
+                res
+            }
+            Token::LessThan => {
+                let res = ast::Expression::Operation(Operation::LessThan(
+                    Box::new(left),
+                    Box::new(self.compute_math_operator(1)?),
+                ));
+                pppy!("解析出来的运算符表达式:{:?}", res);
+                res
+            }
             _ => return Err(Error::Internal("Unexpected token".into())),
         })
     }
 
     // 解析表达式
     fn parse_expression(&mut self) -> Result<ast::Expression> {
+        pppb!("开始进行表达式解析......");
         Ok(match self.next()? {
             Token::Ident(ident) => {
-                // 函数
+                // 函数，检测(、)
                 // count(col_name)
                 if self.next_if_token(Token::OpenParen).is_some() {
                     let col_name = self.next_ident()?;
                     self.next_expect(Token::CloseParen)?;
+                    pppy!(format!(
+                        "解析得到的表达式,函数{:?}",
+                        ast::Expression::Function(ident.clone(), col_name.clone())
+                    ));
                     ast::Expression::Function(ident, col_name)
                 } else {
                     // 列名
+                    pppy!(format!(
+                        "解析得到的表达式,列名{:?}",
+                        ast::Expression::Field(ident.clone())
+                    ));
                     ast::Expression::Field(ident)
                 }
             }
+            // Token行业的规定，数字只能是数字，不能混杂
             Token::Number(n) => {
                 if n.chars().all(|c| c.is_ascii_digit()) {
                     // 整数
-                    ast::Consts::Integer(n.parse()?).into()
+                    let res = ast::Consts::Integer(n.parse()?).into();
+                    pppy!(format!("解析得到的表达式,整数{:?}", res));
+                    res
                 } else {
                     // 浮点数
-                    ast::Consts::Float(n.parse()?).into()
+                    let res = ast::Consts::Float(n.parse()?).into();
+                    pppy!(format!("解析得到的表达式,附点数{:?}", res));
+                    res
                 }
             }
             Token::OpenParen => {
                 let expr = self.compute_math_operator(1)?;
                 self.next_expect(Token::CloseParen)?;
-                expr
+                let res = expr;
+                pppy!(format!("解析得到的表达式,附点数{:?}", res));
+                res
             }
-            Token::String(s) => ast::Consts::String(s).into(),
-            Token::Keyword(Keyword::True) => ast::Consts::Boolean(true).into(),
-            Token::Keyword(Keyword::False) => ast::Consts::Boolean(false).into(),
-            Token::Keyword(Keyword::Null) => ast::Consts::Null.into(),
+            Token::String(s) => {
+                let res = ast::Consts::String(s).into();
+                pppy!(format!("解析得到的表达式,字符串{:?}", res));
+
+                res
+            }
+            Token::Keyword(Keyword::True) => {
+                let res = ast::Consts::Boolean(true).into();
+                pppy!(format!("解析得到的表达式,True{:?}", res));
+
+                res
+            }
+            Token::Keyword(Keyword::False) => {
+                let res = ast::Consts::Boolean(false).into();
+                pppy!(format!("解析得到的表达式,False{:?}", res));
+
+                res
+            }
+            Token::Keyword(Keyword::Null) => {
+                let res = ast::Consts::Null.into();
+                pppy!(format!("解析得到的表达式,Null{:?}", res));
+
+                res
+            }
             t => {
                 return Err(Error::Parse(format!(
                     "[Parser] Unexpected expression token {}",
@@ -509,6 +634,7 @@ impl<'a> Parser<'a> {
     // 5 + 2 + 1
     // 5 + 2 * 1
     fn compute_math_operator(&mut self, min_prec: i32) -> Result<Expression> {
+        pppb!("开始进行数学表达式运算解析,这里是Precedence Climbing算法......");
         let mut left = self.parse_expression()?;
         loop {
             // 当前 Token
@@ -539,23 +665,36 @@ impl<'a> Parser<'a> {
         self.lexer.peek().cloned().transpose()
     }
 
+    // 获取下一个 Token（词法单元）
     fn next(&mut self) -> Result<Token> {
-        self.lexer
-            .next()
-            .unwrap_or_else(|| Err(Error::Parse(format!("[Parser] Unexpected end of input"))))
+        // self.lexer
+        //     .next()
+        //     .unwrap_or_else(|| Err(Error::Parse(format!("[Parser] Unexpected end of input"))))
+        // 这是一个闭包，用于执行闭包中的代码并返回结果。
+        match self.lexer.next() {
+            Some(token) => token,
+            None => Err(Error::Parse(format!("[Parser] Unexpected end of input"))),
+        }
     }
 
+    // 得到下一个Token
     fn next_ident(&mut self) -> Result<String> {
+        pppb!("尝试读取下一个Token......");
         match self.next()? {
-            Token::Ident(ident) => Ok(ident),
+            Token::Ident(ident) =>{
+              let res=  Ok(ident);
+              pppy!(format!("下一个Token是{:?}",res));
+              res
+            } 
             token => Err(Error::Parse(format!(
                 "[Parser] Expected ident, got token {}",
                 token
             ))),
         }
     }
-
+    // 获取下一个 Token 类型的元素，并检查该元素是否与期望的 Token 相匹配
     fn next_expect(&mut self, expect: Token) -> Result<()> {
+        pppb!("尝试匹配下一个Token与当前Token......");
         let token = self.next()?;
         if token != expect {
             return Err(Error::Parse(format!(
@@ -585,11 +724,23 @@ impl<'a> Parser<'a> {
 #[cfg(test)]
 mod tests {
     use crate::{
-        error::Result, pppr, sql::parser::ast::{self, Consts, Expression, OrderDirection}
+        error::Result,
+        pppr,
+        sql::parser::ast::{self, Consts, Expression, OrderDirection},
     };
 
     use super::Parser;
 
+    #[test]
+    fn test_parser_select1() -> Result<()> {
+        // 错误的词法会报错！就是在Parser阶段出现的！
+        // let sql = "   sel ect   *  from t    ;";
+        let sql = "   select   *  from t;";
+        // let sql = "   select   col1 as a,col2  from t    ;";
+        // let sql = "   select   col1 as a,col2 as b  from t1  join t2  on t1.a=t2.a ;";
+        let stmt = Parser::new(sql).parse()?;
+        Ok(())
+    }
     #[test]
     fn test_parser_create_table() -> Result<()> {
         let sql1 = "
@@ -674,27 +825,27 @@ mod tests {
     #[test]
     fn test_parser_select() -> Result<()> {
         let sql = "select * from tbl1;";
-        pppr!("初始的sql文本:",sql);
+        pppr!("初始的sql文本:", sql);
         let stmt = Parser::new(sql).parse()?;
-        pppr!("抽象语法树:",stmt);
-        // assert_eq!(
-        //     stmt,
-        //     ast::Statement::Select {
-        //         select: vec![],
-        //         from: ast::FromItem::Table {
-        //             name: "tbl1".into()
-        //         },
-        //         where_clause: Some(ast::Expression::Operation(ast::Operation::Equal(
-        //             Box::new(ast::Expression::Field("a".into())),
-        //             Box::new(ast::Expression::Consts(Consts::Integer(100)))
-        //         ))),
-        //         group_by: None,
-        //         having: None,
-        //         order_by: vec![],
-        //         limit: Some(Expression::Consts(Consts::Integer(10))),
-        //         offset: Some(Expression::Consts(Consts::Integer(20))),
-        //     }
-        // );
+        pppr!("抽象语法树:", stmt);
+        assert_eq!(
+            stmt,
+            ast::Statement::Select {
+                select: vec![],
+                from: ast::FromItem::Table {
+                    name: "tbl1".into()
+                },
+                where_clause: Some(ast::Expression::Operation(ast::Operation::Equal(
+                    Box::new(ast::Expression::Field("a".into())),
+                    Box::new(ast::Expression::Consts(Consts::Integer(100)))
+                ))),
+                group_by: None,
+                having: None,
+                order_by: vec![],
+                limit: Some(Expression::Consts(Consts::Integer(10))),
+                offset: Some(Expression::Consts(Consts::Integer(20))),
+            }
+        );
 
         let sql = "select * from tbl1 order by a, b asc, c desc;";
         let stmt = Parser::new(sql).parse()?;

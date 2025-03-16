@@ -68,6 +68,7 @@ pub struct Column {
 }
 
 #[derive(Debug, PartialEq)]
+// FromItem枚举 表示 FROM 子句可能包含的不同类型的元素
 pub enum FromItem {
     Table {
         name: String,
@@ -89,13 +90,13 @@ pub enum JoinType {
     Right,
 }
 
-// 表达式定义，目前只有常量和列名
+// 表达式定义，凡是1+1,a>1,等都是表达式
 #[derive(Debug, PartialEq, Clone)]
 pub enum Expression {
-    Field(String),
-    Consts(Consts),
-    Operation(Operation),
-    Function(String, String),//新增 的聚集函数类型，表示聚集函数的相关操作！
+    Field(String),//字段
+    Consts(Consts),//常量
+    Operation(Operation),//=、>、<
+    Function(String, String),//新增的聚集函数类型，表示聚集函数的相关操作！
 }
 
 impl From<Consts> for Expression {
